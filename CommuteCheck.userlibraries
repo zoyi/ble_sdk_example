@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<eclipse-userlibraries>
+  <library name="support-annotations-21.0.3">
+    <archive path="/Users/huy/Documents/android-sdk-macosx/extras/android/m2repository/com/android/support/support-annotations/21.0.3/support-annotations-21.0.3.jar" />
+  </library>
+  <library name="joda-time-2.3">
+    <archive path="/Users/huy/.gradle/caches/modules-2/files-2.1/joda-time/joda-time/2.3/56498efd17752898cfcc3868c1b6211a07b12b8f/joda-time-2.3.jar" />
+  </library>
+  <library name="amore_sdk">
+    <archive path="/Users/huy/Vagrant/Work/dev/CommuteCheck/app/libs/amore_sdk.jar" />
+  </library>
+  <library name="appcompat-v7-21.0.3">
+    <archive path="/Users/huy/Vagrant/Work/dev/CommuteCheck/app/build/intermediates/exploded-aar/com.android.support/appcompat-v7/21.0.3/res" />
+    <archive path="/Users/huy/Vagrant/Work/dev/CommuteCheck/app/build/intermediates/exploded-aar/com.android.support/appcompat-v7/21.0.3/classes.jar" />
+  </library>
+  <library name="support-v4-21.0.3">
+    <archive path="/Users/huy/Vagrant/Work/dev/CommuteCheck/app/build/intermediates/exploded-aar/com.android.support/support-v4/21.0.3/libs/internal_impl-21.0.3.jar" />
+    <archive path="/Users/huy/Vagrant/Work/dev/CommuteCheck/app/build/intermediates/exploded-aar/com.android.support/support-v4/21.0.3/res" />
+    <archive path="/Users/huy/Vagrant/Work/dev/CommuteCheck/app/build/intermediates/exploded-aar/com.android.support/support-v4/21.0.3/classes.jar" />
+  </library>
+</eclipse-userlibraries>
+
