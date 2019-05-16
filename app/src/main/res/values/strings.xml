@@ -20,5 +20,9 @@
     <string name="cannot_find_available_scanner">블루투스나 와이파이를 켜주시기 바랍니다.</string>
     <string name="confirm">확인</string>
     <string name="title_activity_scan">ScanActivity</string>
-
+    <string name="target_macs_input_placeholder">TargetMac(복수개일 경우 \',\')</string>
+    <string name="wifi_on_off">와이파이</string>
+    <string name="bluetooth_on_off">블루투스</string>
+    <string name="location_on_off">위치설정</string>
+    <string name="sync_all">상태 확인하기</string>
 </resources>

@@ -13,9 +13,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.widget.*;
 import co.zoyi.ble_sdk.Etc.*;
 import co.zoyi.ble_sdk.Receiver.*;
 import co.zoyi.ble_sdk.Repository.*;
@@ -27,6 +25,7 @@ import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
@@ -40,7 +39,10 @@ public class DeviceScanActivity extends ApplicationActivity {
   Handler mHandler = new Handler();
 
   public DeviceScanActivity() {
-    targetMacs.add("f4fd2b20121e");
+  }
+
+  public void syncAllBtn(View v) {
+    syncAllSwitch();
   }
 
   public void toggleScan(View v) {
@@ -49,10 +51,11 @@ public class DeviceScanActivity extends ApplicationActivity {
       finish();
     }
 
+    clearWithUpdateTargetMacs();
     mProgress = ProgressDialog.show(
         this,
         getString(R.string.title_dialog_scanning),
-        getString(R.string.message_dialog_scanning),
+        String.format("tagetMacs: %s, \n%s", getTargetMacs(), getString(R.string.message_dialog_scanning)),
         true,
         true,
         new DialogInterface.OnCancelListener(){
@@ -159,10 +162,61 @@ public class DeviceScanActivity extends ApplicationActivity {
     updateScanBtn();
   }
 
+  public List<String> getTargetMacs() {
+    EditText text = (EditText)findViewById(R.id.targetMacs);
+    String value = text.getText().toString();
+    return Arrays.asList(value.split(","));
+  }
+
+  public void clearWithUpdateTargetMacs() {
+    targetMacs.clear();
+    targetMacs.addAll(getTargetMacs());
+  }
+
+  public void syncWifiOnOffSwitch() {
+    Switch wifiOnOffSwitch = (Switch)  findViewById(R.id.wifi_on_off);
+    wifiOnOffSwitch.setChecked(WifiService.checkWifi(this));
+  }
+
+  public void handleWifiOnOffSwitch() {
+    Switch wifiOnOffSwitch = (Switch)  findViewById(R.id.wifi_on_off);
+  }
+
+  public void syncBluetoothOnOffSwitch() {
+    Switch bluetoothOnOffSwitch = (Switch)  findViewById(R.id.bluetooth_on_off);
+    bluetoothOnOffSwitch.setChecked(BluetoothService.checkBluetooth(this));
+  }
+
+  public void handleBluetoothOnOffSwitch() {
+    Switch bluetoothOnOffSwitch = (Switch)  findViewById(R.id.bluetooth_on_off);
+  }
+
+  public void syncLocationOnOffSwitch() {
+    Switch locationOnOffSwitch = (Switch)  findViewById(R.id.location_on_off);
+    boolean checked = this.checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    locationOnOffSwitch.setChecked(checked);
+  }
+
+  public void handleLocationOnOffSwitch() {
+    Switch locationOnOffSwitch = (Switch)  findViewById(R.id.location_on_off);
+  }
+
+  public void syncAllSwitch() {
+    syncBluetoothOnOffSwitch();
+    syncWifiOnOffSwitch();
+    syncLocationOnOffSwitch();
+  }
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_device_scan);
+
+    syncAllSwitch();
+
+    handleBluetoothOnOffSwitch();
+    handleLocationOnOffSwitch();
+    handleWifiOnOffSwitch();
 
     if (Build.VERSION.SDK_INT >= 18) {
       if (bluetoohSetup() == false) {
