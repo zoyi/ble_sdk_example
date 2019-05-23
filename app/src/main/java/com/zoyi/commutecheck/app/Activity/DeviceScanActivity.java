@@ -38,6 +38,7 @@ public class DeviceScanActivity extends ApplicationActivity {
   ProgressDialog mProgress;
   Handler mHandler = new Handler();
 
+
   public DeviceScanActivity() {
   }
 
@@ -48,7 +49,7 @@ public class DeviceScanActivity extends ApplicationActivity {
   public void toggleScan(View v) {
     if (!BluetoothService.checkBluetooth(this) && !WifiService.checkWifi(this)) {
       Toast.makeText(this, R.string.cannot_find_available_scanner, Toast.LENGTH_LONG).show();
-      finish();
+//      finish();
     }
 
     clearWithUpdateTargetMacs();
@@ -180,6 +181,12 @@ public class DeviceScanActivity extends ApplicationActivity {
 
   public void handleWifiOnOffSwitch() {
     Switch wifiOnOffSwitch = (Switch)  findViewById(R.id.wifi_on_off);
+    wifiOnOffSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+      @Override
+      public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+        wifiEnabled(isChecked);
+      }
+    });
   }
 
   public void syncBluetoothOnOffSwitch() {
@@ -189,16 +196,36 @@ public class DeviceScanActivity extends ApplicationActivity {
 
   public void handleBluetoothOnOffSwitch() {
     Switch bluetoothOnOffSwitch = (Switch)  findViewById(R.id.bluetooth_on_off);
+    bluetoothOnOffSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+      @Override
+      public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+        bluetoothEnabled(isChecked);
+      }
+    });
   }
 
   public void syncLocationOnOffSwitch() {
     Switch locationOnOffSwitch = (Switch)  findViewById(R.id.location_on_off);
     boolean checked = this.checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
     locationOnOffSwitch.setChecked(checked);
+    if (checked) {
+      locationOnOffSwitch.setEnabled(false);
+      locationOnOffSwitch.setClickable(false);
+    }
   }
 
   public void handleLocationOnOffSwitch() {
     Switch locationOnOffSwitch = (Switch)  findViewById(R.id.location_on_off);
+    locationOnOffSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+      @Override
+      public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+        if (isChecked) {
+          requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 0);
+          buttonView.setEnabled(false);
+          buttonView.setClickable(false);
+        }
+      }
+    });
   }
 
   public void syncAllSwitch() {
@@ -218,42 +245,40 @@ public class DeviceScanActivity extends ApplicationActivity {
     handleLocationOnOffSwitch();
     handleWifiOnOffSwitch();
 
-    if (Build.VERSION.SDK_INT >= 18) {
-      if (bluetoohSetup() == false) {
-        wifiSetup();
+    scannerReceiver = new BleReceiver(this, targetMacs, new ScannerReceiverCallback() {
+      @Override
+      public void onSuccess(ZoyiSignal value) {
+        validateRecord(value);
       }
-    } else {
-      // wifi beacon
-      wifiSetup();
-    }
+    });
 
-    if (BluetoothService.checkBluetooth(this)) {
-      if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-        if (this.checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-          requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 0);
-        }
-        scannerReceiver = new BleReceiver(this, targetMacs, new ScannerReceiverCallback() {
-          @Override
-          public void onSuccess(ZoyiSignal value) {
-            validateRecord(value);
-          }
-        });
-      } else if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-        scannerReceiver = new LegacyBleReceiver(this, targetMacs, new ScannerReceiverCallback() {
-          @Override
-          public void onSuccess(ZoyiSignal value) {
-            validateRecord(value);
-          }
-        });
-      }
-    } else {
-      scannerReceiver = new WifiReceiver(this, targetMacs, new ScannerReceiverCallback() {
-        @Override
-        public void onSuccess(ZoyiSignal value) {
-          validateRecord(value);
-        }
-      });
-    }
+//    if (BluetoothService.checkBluetooth(this)) {
+//      if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+//        if (this.checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+//          requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 0);
+//        }
+//        scannerReceiver = new BleReceiver(this, targetMacs, new ScannerReceiverCallback() {
+//          @Override
+//          public void onSuccess(ZoyiSignal value) {
+//            validateRecord(value);
+//          }
+//        });
+//      } else if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+//        scannerReceiver = new LegacyBleReceiver(this, targetMacs, new ScannerReceiverCallback() {
+//          @Override
+//          public void onSuccess(ZoyiSignal value) {
+//            validateRecord(value);
+//          }
+//        });
+//      }
+//    } else {
+//      scannerReceiver = new WifiReceiver(this, targetMacs, new ScannerReceiverCallback() {
+//        @Override
+//        public void onSuccess(ZoyiSignal value) {
+//          validateRecord(value);
+//        }
+//      });
+//    }
     updateScanBtn();
   }
 
@@ -261,18 +286,14 @@ public class DeviceScanActivity extends ApplicationActivity {
   protected void onActivityResult(int requestCode, int resultCode, Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
     if (requestCode == REQUEST_ENABLE_BT) {
-      if (resultCode == RESULT_CANCELED) {
-        // 블루투스는 꺼져있고 와이파이를 키는 경우.
-        wifiSetup();
-      } else if(resultCode == RESULT_OK) {
+      syncBluetoothOnOffSwitch();
         // 나중에 블루투스가 켜진경우.
-        scannerReceiver = new BleReceiver(this, targetMacs, new ScannerReceiverCallback() {
-          @Override
-          public void onSuccess(ZoyiSignal value) {
-            validateRecord(value);
-          }
-        });
-      }
+//        scannerReceiver = new BleReceiver(this, targetMacs, new ScannerReceiverCallback() {
+//          @Override
+//          public void onSuccess(ZoyiSignal value) {
+//            validateRecord(value);
+//          }
+//        });
     }
   }
 

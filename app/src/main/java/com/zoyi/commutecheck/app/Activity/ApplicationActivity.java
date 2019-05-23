@@ -15,6 +15,16 @@ import com.zoyi.commutecheck.app.R;
 public class ApplicationActivity extends Activity {
   protected final static int REQUEST_ENABLE_BT = 987654321;
 
+  public void bluetoothEnabled(boolean enable) {
+    if (enable) {
+      Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+      startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+    } else {
+      BluetoothAdapter bAdapter = BluetoothAdapter.getDefaultAdapter();
+      bAdapter.disable();
+    }
+  }
+
   public Boolean bluetoohSetup() {
     if (!BluetoothService.hasBLE(this)) {
       Toast.makeText(this, R.string.ble_not_supported, Toast.LENGTH_SHORT).show();
@@ -28,8 +38,13 @@ public class ApplicationActivity extends Activity {
     return true;
   }
 
+  public void wifiEnabled(boolean enable) {
+    WifiManager wifiManager=(WifiManager)getApplicationContext().getSystemService(this.WIFI_SERVICE);
+    wifiManager.setWifiEnabled(enable);
+  }
+
   public Boolean wifiSetup(){
-    WifiManager wifiManager=(WifiManager)getSystemService(this.WIFI_SERVICE);
+    WifiManager wifiManager=(WifiManager)getApplicationContext().getSystemService(this.WIFI_SERVICE);
     if (!WifiService.checkWifi(this)) {
       Toast.makeText(this, R.string.enable_wifi, Toast.LENGTH_LONG).show();
       wifiManager.setWifiEnabled(true);
