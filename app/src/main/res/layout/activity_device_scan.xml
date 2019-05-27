@@ -8,53 +8,23 @@
                 android:paddingBottom="@dimen/activity_vertical_margin"
                 android:paddingLeft="@dimen/activity_horizontal_margin"
                 android:id="@+id/device_scan" android:background="@color/white">
-
-    <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/commute_msg"
-            android:textSize="20dp" android:layout_alignParentTop="true"
-            android:layout_alignRight="@+id/textView" android:layout_alignEnd="@+id/textView"/>
-  <Button android:layout_width="fill_parent"
-          android:layout_height="wrap_content"
-          style="@style/PrimaryBtn"
-          android:text="Active"
-          android:id="@+id/toggle_scan"
-          android:clickable="true"
-          android:onClick="toggleScan" android:layout_gravity="center_horizontal|bottom" android:alpha="0.8"
-          android:textStyle="bold"
-          android:layout_centerHorizontal="true" android:layout_alignParentBottom="true"
-          android:layout_marginBottom="96dp"/>
-  <TextView
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:textAppearance="?android:attr/textAppearanceMedium"
-    android:text="@string/desc_scanning"
-    android:id="@+id/textView" android:layout_gravity="center_horizontal|top"
-    android:background="#28f0f0f0"
-    android:gravity="center"
-    android:paddingTop="@dimen/activity_vertical_margin"
-    android:paddingBottom="@dimen/activity_vertical_margin"
-    android:paddingLeft="@dimen/activity_horizontal_margin"
-    android:paddingRight="@dimen/activity_horizontal_margin"
-    android:textStyle="normal"
-    android:textSize="25dp"
-    android:layout_centerHorizontal="true" android:layout_alignParentBottom="true" android:layout_marginBottom="186dp"/>
   <android.support.design.widget.TextInputLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_below="@+id/commute_msg" android:layout_alignStart="@+id/toggle_scan">
-
+    android:id="@+id/target_macs_layout">
     <android.support.design.widget.TextInputEditText
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:inputType="text" android:id="@+id/targetMacs" android:hint="@string/target_macs_input_placeholder"/>
+      android:inputType="text" android:id="@+id/target_macs" android:hint="@string/target_macs_input_placeholder"/>
   </android.support.design.widget.TextInputLayout>
   <LinearLayout
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_centerHorizontal="true" android:layout_alignParentTop="true" android:layout_marginTop="101dp"
+    android:layout_below="@+id/target_macs_layout"
+    android:layout_alignStart="@+id/target_macs_layout"
+    android:layout_centerHorizontal="true"
+    android:id="@+id/switches_and_status_layout"
   >
     <LinearLayout
       android:orientation="horizontal"
@@ -87,6 +57,37 @@
       android:layout_width="match_parent"
       android:layout_height="wrap_content" android:id="@+id/sync_all"
       android:onClick="syncAllBtn"/>
+  </LinearLayout>
+  <LinearLayout
+    android:orientation="horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_below="@+id/switches_and_status_layout"
+    android:layout_alignStart="@+id/switches_and_status_layout"
+    android:id="@+id/activate_receviers_layout"
+    android:layout_centerHorizontal="true">
+    <Button
+      android:text="@string/ble_receiver_activate"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content" android:id="@+id/ble_receiver_activate" android:layout_weight="1"
+      android:onClick="activateBleReceiver"/>
+    <Button
+      android:text="@string/wifi_receiver_activate"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content" android:id="@+id/wifi_receiver_activate" android:layout_weight="1"
+      android:onClick="activateWifiReceiver"/>
+  </LinearLayout>
+  <LinearLayout
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_below="@+id/activate_receviers_layout"
+    android:layout_marginTop="20dp"
+    android:layout_alignStart="@+id/activate_receviers_layout">
+    <android.support.v7.widget.RecyclerView
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:id="@+id/monitoring_target_mac_recycler"/>
   </LinearLayout>
 
 </RelativeLayout>

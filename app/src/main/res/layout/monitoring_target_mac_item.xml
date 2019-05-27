@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                xmlns:tools="http://schemas.android.com/tools"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/white">
+  <LinearLayout
+    android:orientation="horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content" android:layout_weight="1"
+    android:id="@+id/monitoring_target_mac_item_mac_layout">
+    <TextView
+      android:text="@string/target_mac_label"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content" android:layout_weight="1"/>
+    <TextView
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content" android:id="@+id/monitoring_target_mac_item_target_mac"
+      android:layout_weight="1"/>
+  </LinearLayout>
+  <LinearLayout
+    android:orientation="horizontal"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:id="@+id/monitoring_target_mac_item_rssi_layout"
+    android:layout_below="@+id/monitoring_target_mac_item_mac_layout"
+    android:layout_alignStart="@+id/monitoring_target_mac_item_mac_layout">
+    <TextView
+      android:text="@string/rssi_label"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content" android:layout_weight="1"/>
+    <TextView
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content" android:id="@+id/monitoring_target_mac_item_rssi"
+      android:layout_weight="1"/>
+  </LinearLayout>
+</RelativeLayout>

@@ -3,12 +3,15 @@ package com.zoyi.commutecheck.app.Activity;
 import android.Manifest;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -24,17 +27,17 @@ import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 
 
 public class DeviceScanActivity extends ApplicationActivity {
   private static final String TAG = "DeviceScanActivity";
   private List<String> targetMacs = new ArrayList<>();
+  private Map<String, List<Integer>> monitoringTargetMacRssi = new HashMap<>();
+  private MonitoringTargetMacAdapter monitoringTargetMacAdapter;
   private boolean mScanning = false;
-  private ScannerReceiver scannerReceiver;
+  private ScannerReceiver wifiReceiver;
+  private ScannerReceiver bleReceiver;
   ProgressDialog mProgress;
   Handler mHandler = new Handler();
 
@@ -46,14 +49,45 @@ public class DeviceScanActivity extends ApplicationActivity {
     syncAllSwitch();
   }
 
-  public void toggleScan(View v) {
-    if (!BluetoothService.checkBluetooth(this) && !WifiService.checkWifi(this)) {
-      Toast.makeText(this, R.string.cannot_find_available_scanner, Toast.LENGTH_LONG).show();
-//      finish();
+  public void createAndRegisterWifiReceiver() {
+    if (wifiReceiver != null) {
+      wifiReceiver.stopScan(this);
+      wifiReceiver = null;
     }
+    wifiReceiver = new WifiReceiver(this, targetMacs, new ScannerReceiverCallback() {
+      @Override
+      public void onSuccess(ZoyiSignal value) {
+        validateRecord(value);
+      }
+    });
+  }
 
-    clearWithUpdateTargetMacs();
-    mProgress = ProgressDialog.show(
+  public void createAndRegisterBleReceiver() {
+    if (bleReceiver != null) {
+      bleReceiver.stopScan(this);
+      bleReceiver = null;
+    }
+    // latest versions
+    if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+      bleReceiver = new BleReceiver(this, targetMacs, new ScannerReceiverCallback() {
+        @Override
+        public void onSuccess(ZoyiSignal value) {
+          validateRecord(value);
+        }
+      });
+    } // old versions
+    if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+      bleReceiver = new LegacyBleReceiver(this, targetMacs, new ScannerReceiverCallback() {
+        @Override
+        public void onSuccess(ZoyiSignal value) {
+          validateRecord(value);
+        }
+      });
+    }
+  }
+
+  public ProgressDialog showCommuteProgressDialog(final ScannerReceiver receiver, final Context context) {
+    mProgress =  ProgressDialog.show(
         this,
         getString(R.string.title_dialog_scanning),
         String.format("tagetMacs: %s, \n%s", getTargetMacs(), getString(R.string.message_dialog_scanning)),
@@ -62,7 +96,7 @@ public class DeviceScanActivity extends ApplicationActivity {
         new DialogInterface.OnCancelListener(){
           @Override
           public void onCancel(DialogInterface dialog) {
-            stopScanning();
+            receiver.stopScan(context);
             dialog.dismiss();
             mHandler.removeCallbacksAndMessages(null);
           }});
@@ -71,7 +105,7 @@ public class DeviceScanActivity extends ApplicationActivity {
       @Override
       public void run() {
         if (mProgress.isShowing()) {
-          stopScanning();
+          receiver.stopScan(context);
           mProgress.dismiss();
           AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(DeviceScanActivity.this);
           alertDialogBuilder
@@ -88,23 +122,31 @@ public class DeviceScanActivity extends ApplicationActivity {
       }
     }, 20000);
 
+    return mProgress;
+  }
 
+  public void activateWifiReceiver(View v) {
+    clearWithUpdateTargetMacs();
+    createAndRegisterWifiReceiver();
+    wifiReceiver.startScan(this);
+//    showCommuteProgressDialog(wifiReceiver, this);
+  }
 
-    if (mScanning) {
-      stopScanning();
-      mHandler.removeCallbacksAndMessages(null);
-    } else {
-      startScanning();
-    }
+  public void activateBleReceiver(View v) {
+    clearWithUpdateTargetMacs();
+    createAndRegisterBleReceiver();
+    bleReceiver.startScan(this);
+//    showCommuteProgressDialog(bleReceiver, this);
   }
 
   public void commuteSuccess(ZoyiSignal record) {
-    TextView textView = (TextView)findViewById(R.id.commute_msg);
     String commuteSuccessMsg = getString(R.string.commute_success_message);
     DateTimeFormatter fmt = DateTimeFormat.forPattern("yyyy년 MM월 dd일 k시 m분");
-    stopScanning();
-    mHandler.removeCallbacksAndMessages(null);
-    mProgress.dismiss();
+    if (record instanceof ZoyiBleSignal) {
+      clearHandlerAndDialogStopReceiver(bleReceiver, this);
+    } else if (record instanceof ZoyiWifiSignal) {
+      clearHandlerAndDialogStopReceiver(wifiReceiver, this);
+    }
 
     AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
     alertDialogBuilder
@@ -114,7 +156,6 @@ public class DeviceScanActivity extends ApplicationActivity {
         .setPositiveButton(R.string.confirm, new DialogInterface.OnClickListener() {
           @Override
           public void onClick(DialogInterface dialogInterface, int i) {
-            finish();
           }
         });
     alertDialogBuilder.create().show();
@@ -122,56 +163,61 @@ public class DeviceScanActivity extends ApplicationActivity {
 
   public Boolean isValidateRecord(ZoyiSignal record) {
     if (record instanceof ZoyiBleSignal) {
-      if (((ZoyiBleSignal) record).getRssi() >= -70) {
+      if (((ZoyiBleSignal) record).getRssi() >= -65) {
         return true;
       }
     } else if (record instanceof ZoyiWifiSignal) {
-      if (((ZoyiWifiSignal) record).getRssi() >= -70) {
+      if (((ZoyiWifiSignal) record).getRssi() >= -65) {
         return true;
       }
     }
     return false;
   }
 
+  public void addMonitoringTargetMacRssi(ZoyiSignal record) {
+    List<Integer> rssis = monitoringTargetMacRssi.get(record.getMac());
+    if (rssis == null) {
+      rssis = new ArrayList<>();
+    }
+    rssis.add(record.getRssi());
+    monitoringTargetMacRssi.put(record.getMac(), rssis);
+    monitoringTargetMacAdapter.setDataSet(monitoringTargetMacRssi);
+    monitoringTargetMacAdapter.notifyDataSetChanged();
+  }
+
   public void validateRecord(ZoyiSignal record) {
-    ZoyiSignal ZoyiSignal = (ZoyiSignal)record;
-    Log.v(DeviceScanActivity.class.toString(), ZoyiSignal.toString());
+    Log.v(DeviceScanActivity.class.toString(), record.toString());
+    addMonitoringTargetMacRssi(record);
     if (isValidateRecord(record)) {
-      commuteSuccess(ZoyiSignal);
+//      commuteSuccess(record);
       Log.v(DeviceScanActivity.class.toString(), "commuteSuccess");
-    }
-    Log.d(TAG, record.toString());
-  }
-
-  public void updateScanBtn() {
-    Button btn = (Button)findViewById(R.id.toggle_scan);
-    if (mScanning) {
-      btn.setText(R.string.stop_scanning);
     } else {
-      btn.setText(R.string.start_scanning);
+      Log.d(DeviceScanActivity.class.toString(), "rssi to weak");
     }
-  }
-
-  public void startScanning() {
-    mScanning = true;
-    scannerReceiver.startScan(this);
-    updateScanBtn();
-  }
-  public void stopScanning() {
-    mScanning = false;
-    scannerReceiver.stopScan(this);
-    updateScanBtn();
   }
 
   public List<String> getTargetMacs() {
-    EditText text = (EditText)findViewById(R.id.targetMacs);
+    EditText text = (EditText)findViewById(R.id.target_macs);
     String value = text.getText().toString();
-    return Arrays.asList(value.split(","));
+    List<String> result = new ArrayList<>();
+    for (String token : value.split(",")) {
+      if (!token.equals("")) {
+        result.add(token);
+      }
+    }
+    return result;
+  }
+
+  public void clearHandlerAndDialogStopReceiver(final ScannerReceiver receiver, final Context context) {
+    receiver.stopScan(context);
+    mHandler.removeCallbacksAndMessages(null);
+    mProgress.dismiss();
   }
 
   public void clearWithUpdateTargetMacs() {
     targetMacs.clear();
     targetMacs.addAll(getTargetMacs());
+    monitoringTargetMacRssi.clear();
   }
 
   public void syncWifiOnOffSwitch() {
@@ -244,42 +290,12 @@ public class DeviceScanActivity extends ApplicationActivity {
     handleBluetoothOnOffSwitch();
     handleLocationOnOffSwitch();
     handleWifiOnOffSwitch();
+    RecyclerView recyclerView = findViewById(R.id.monitoring_target_mac_recycler) ;
+    recyclerView.setLayoutManager(new LinearLayoutManager(this)) ;
 
-    scannerReceiver = new BleReceiver(this, targetMacs, new ScannerReceiverCallback() {
-      @Override
-      public void onSuccess(ZoyiSignal value) {
-        validateRecord(value);
-      }
-    });
-
-//    if (BluetoothService.checkBluetooth(this)) {
-//      if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-//        if (this.checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-//          requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 0);
-//        }
-//        scannerReceiver = new BleReceiver(this, targetMacs, new ScannerReceiverCallback() {
-//          @Override
-//          public void onSuccess(ZoyiSignal value) {
-//            validateRecord(value);
-//          }
-//        });
-//      } else if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
-//        scannerReceiver = new LegacyBleReceiver(this, targetMacs, new ScannerReceiverCallback() {
-//          @Override
-//          public void onSuccess(ZoyiSignal value) {
-//            validateRecord(value);
-//          }
-//        });
-//      }
-//    } else {
-//      scannerReceiver = new WifiReceiver(this, targetMacs, new ScannerReceiverCallback() {
-//        @Override
-//        public void onSuccess(ZoyiSignal value) {
-//          validateRecord(value);
-//        }
-//      });
-//    }
-    updateScanBtn();
+    // 리사이클러뷰에 SimpleTextAdapter 객체 지정.
+    monitoringTargetMacAdapter = new MonitoringTargetMacAdapter(monitoringTargetMacRssi) ;
+    recyclerView.setAdapter(monitoringTargetMacAdapter) ;
   }
 
   @Override
@@ -287,13 +303,6 @@ public class DeviceScanActivity extends ApplicationActivity {
     super.onActivityResult(requestCode, resultCode, data);
     if (requestCode == REQUEST_ENABLE_BT) {
       syncBluetoothOnOffSwitch();
-        // 나중에 블루투스가 켜진경우.
-//        scannerReceiver = new BleReceiver(this, targetMacs, new ScannerReceiverCallback() {
-//          @Override
-//          public void onSuccess(ZoyiSignal value) {
-//            validateRecord(value);
-//          }
-//        });
     }
   }
 
@@ -322,16 +331,10 @@ public class DeviceScanActivity extends ApplicationActivity {
   @Override
   protected void onResume() {
     super.onResume();
-    if (mScanning) {
-      scannerReceiver.startScan(this);
-    }
   }
 
   @Override
   protected void onPause() {
     super.onPause();
-    if (mScanning) {
-      scannerReceiver.stopScan(this);
-    }
   }
 }
