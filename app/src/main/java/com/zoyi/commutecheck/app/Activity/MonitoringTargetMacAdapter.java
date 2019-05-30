@@ -62,7 +62,16 @@ public class MonitoringTargetMacAdapter extends RecyclerView.Adapter<MonitoringT
 
     void onBind(Pair<String, List<Integer>> value) {
       targetMac.setText(value.first);
-      rssi.setText(value.second.get(value.second.size() - 1).toString());
+      String rssiString = String.format("마지막: %d, 평균: %d", value.second.get(value.second.size() - 1), average(value.second));
+      rssi.setText(rssiString);
+    }
+
+    Long average(List<Integer> list) {
+      Long sum = 0L;
+      for (Integer value : list) {
+        sum += value;
+      }
+      return sum / list.size();
     }
   }
 }

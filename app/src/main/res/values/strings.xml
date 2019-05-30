@@ -10,7 +10,7 @@
   <string name="title_dialog_scanning">출근 확인</string>
   <string name="message_dialog_scanning">출근 장비를 찾는 중...</string>
   <string name="commute_success_title">출근완료</string>
-  <string name="commute_success_message">출근처리가 완료 되었습니다.\n오늘도 행복한 하루 되시기 바랍니다. 감사합니다.</string>
+  <string name="commute_success_message">출근처리가 완료 되었습니다.</string>
   <string name="cannot_find_device_title">출근 확인 실패</string>
   <string name="cannot_find_device_message">출근 장비를 찾지 못했습니다. 다시한 번 장비에 터치해 주세요.</string>
   <string name="start_scanning">출근 확인</string>

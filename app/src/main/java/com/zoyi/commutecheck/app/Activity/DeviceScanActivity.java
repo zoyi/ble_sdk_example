@@ -1,18 +1,17 @@
 package com.zoyi.commutecheck.app.Activity;
 
 import android.Manifest;
-import android.app.AlertDialog;
-import android.app.ProgressDialog;
-import android.content.Context;
-import android.content.DialogInterface;
-import android.content.Intent;
+import android.bluetooth.BluetoothAdapter;
+import android.content.*;
 import android.content.pm.PackageManager;
+import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -35,12 +34,12 @@ public class DeviceScanActivity extends ApplicationActivity {
   private List<String> targetMacs = new ArrayList<>();
   private Map<String, List<Integer>> monitoringTargetMacRssi = new HashMap<>();
   private MonitoringTargetMacAdapter monitoringTargetMacAdapter;
-  private boolean mScanning = false;
+  private BroadcastReceiver mBluetoothStateChangeReceiver;
+  private BroadcastReceiver mWifiStateChangeReceiver;
   private ScannerReceiver wifiReceiver;
   private ScannerReceiver bleReceiver;
-  ProgressDialog mProgress;
-  Handler mHandler = new Handler();
-
+  Handler mBleHandler = new Handler();
+  Handler mWifiHandler = new Handler();
 
   public DeviceScanActivity() {
   }
@@ -75,8 +74,7 @@ public class DeviceScanActivity extends ApplicationActivity {
           validateRecord(value);
         }
       });
-    } // old versions
-    if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+    } else if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
       bleReceiver = new LegacyBleReceiver(this, targetMacs, new ScannerReceiverCallback() {
         @Override
         public void onSuccess(ZoyiSignal value) {
@@ -86,88 +84,54 @@ public class DeviceScanActivity extends ApplicationActivity {
     }
   }
 
-  public ProgressDialog showCommuteProgressDialog(final ScannerReceiver receiver, final Context context) {
-    mProgress =  ProgressDialog.show(
-        this,
-        getString(R.string.title_dialog_scanning),
-        String.format("tagetMacs: %s, \n%s", getTargetMacs(), getString(R.string.message_dialog_scanning)),
-        true,
-        true,
-        new DialogInterface.OnCancelListener(){
-          @Override
-          public void onCancel(DialogInterface dialog) {
-            receiver.stopScan(context);
-            dialog.dismiss();
-            mHandler.removeCallbacksAndMessages(null);
-          }});
-
-    mHandler.postDelayed(new Runnable() {
+  public void startStopAndWaitting(
+      final Long delayMillis,
+      final Button view,
+      final Handler handler,
+      final ScannerReceiver receiver,
+      final Context context) {
+    view.setEnabled(false);
+    final String original = view.getText().toString();
+    view.setText(getString(R.string.message_dialog_scanning));
+    receiver.startScan(context);
+    handler.postDelayed(new Runnable() {
       @Override
       public void run() {
-        if (mProgress.isShowing()) {
-          receiver.stopScan(context);
-          mProgress.dismiss();
-          AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(DeviceScanActivity.this);
-          alertDialogBuilder
-              .setTitle(getString(R.string.cannot_find_device_title))
-              .setMessage(getString(R.string.cannot_find_device_message))
-              .setCancelable(true)
-              .setPositiveButton(R.string.confirm, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialogInterface, int i) {
-                }
-              });
-          alertDialogBuilder.create().show();
-        }
+        receiver.stopScan(context);
+        view.setEnabled(true);
+        view.setText(original);
       }
-    }, 20000);
-
-    return mProgress;
+    }, delayMillis);
   }
 
   public void activateWifiReceiver(View v) {
     clearWithUpdateTargetMacs();
     createAndRegisterWifiReceiver();
-    wifiReceiver.startScan(this);
-//    showCommuteProgressDialog(wifiReceiver, this);
+    startStopAndWaitting(10000L, (Button)v, mWifiHandler, wifiReceiver, this);
   }
 
   public void activateBleReceiver(View v) {
     clearWithUpdateTargetMacs();
     createAndRegisterBleReceiver();
-    bleReceiver.startScan(this);
-//    showCommuteProgressDialog(bleReceiver, this);
+    startStopAndWaitting(10000L, (Button)v, mBleHandler, bleReceiver, this);
   }
 
   public void commuteSuccess(ZoyiSignal record) {
     String commuteSuccessMsg = getString(R.string.commute_success_message);
     DateTimeFormatter fmt = DateTimeFormat.forPattern("yyyy년 MM월 dd일 k시 m분");
-    if (record instanceof ZoyiBleSignal) {
-      clearHandlerAndDialogStopReceiver(bleReceiver, this);
-    } else if (record instanceof ZoyiWifiSignal) {
-      clearHandlerAndDialogStopReceiver(wifiReceiver, this);
-    }
-
-    AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
-    alertDialogBuilder
-        .setTitle(getString(R.string.commute_success_title))
-        .setMessage(String.format("%s %s\n%s", record.getMac(), new DateTime(record.getTs()).toString(fmt.withLocale(Locale.KOREA)), commuteSuccessMsg))
-        .setCancelable(true)
-        .setPositiveButton(R.string.confirm, new DialogInterface.OnClickListener() {
-          @Override
-          public void onClick(DialogInterface dialogInterface, int i) {
-          }
-        });
-    alertDialogBuilder.create().show();
+    DateTime now = DateTime.now();
+    Toast toast = Toast.makeText(this, commuteSuccessMsg + "\n" + now.toString(fmt), Toast.LENGTH_LONG);
+    toast.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL, 0, 0);
+    toast.show();
   }
 
   public Boolean isValidateRecord(ZoyiSignal record) {
     if (record instanceof ZoyiBleSignal) {
-      if (((ZoyiBleSignal) record).getRssi() >= -65) {
+      if (((ZoyiBleSignal) record).getRssi() >= -70) {
         return true;
       }
     } else if (record instanceof ZoyiWifiSignal) {
-      if (((ZoyiWifiSignal) record).getRssi() >= -65) {
+      if (((ZoyiWifiSignal) record).getRssi() >= -70) {
         return true;
       }
     }
@@ -180,6 +144,9 @@ public class DeviceScanActivity extends ApplicationActivity {
       rssis = new ArrayList<>();
     }
     rssis.add(record.getRssi());
+    if (rssis.size() > 100) {
+      rssis.remove(0);
+    }
     monitoringTargetMacRssi.put(record.getMac(), rssis);
     monitoringTargetMacAdapter.setDataSet(monitoringTargetMacRssi);
     monitoringTargetMacAdapter.notifyDataSetChanged();
@@ -189,7 +156,7 @@ public class DeviceScanActivity extends ApplicationActivity {
     Log.v(DeviceScanActivity.class.toString(), record.toString());
     addMonitoringTargetMacRssi(record);
     if (isValidateRecord(record)) {
-//      commuteSuccess(record);
+      commuteSuccess(record);
       Log.v(DeviceScanActivity.class.toString(), "commuteSuccess");
     } else {
       Log.d(DeviceScanActivity.class.toString(), "rssi to weak");
@@ -208,16 +175,12 @@ public class DeviceScanActivity extends ApplicationActivity {
     return result;
   }
 
-  public void clearHandlerAndDialogStopReceiver(final ScannerReceiver receiver, final Context context) {
-    receiver.stopScan(context);
-    mHandler.removeCallbacksAndMessages(null);
-    mProgress.dismiss();
-  }
-
   public void clearWithUpdateTargetMacs() {
     targetMacs.clear();
     targetMacs.addAll(getTargetMacs());
     monitoringTargetMacRssi.clear();
+    monitoringTargetMacAdapter.setDataSet(monitoringTargetMacRssi);
+    monitoringTargetMacAdapter.notifyDataSetChanged();
   }
 
   public void syncWifiOnOffSwitch() {
@@ -280,12 +243,58 @@ public class DeviceScanActivity extends ApplicationActivity {
     syncLocationOnOffSwitch();
   }
 
+  public void registerBluetoothStateChangeReceiver() {
+    mBluetoothStateChangeReceiver = new BroadcastReceiver() {
+      @Override
+      public void onReceive(Context context, Intent intent) {
+        final String action = intent.getAction();
+
+        if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
+          final int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR);
+          switch (state) {
+            case BluetoothAdapter.STATE_OFF:
+            case BluetoothAdapter.STATE_TURNING_OFF:
+            case BluetoothAdapter.STATE_ON:
+            case BluetoothAdapter.STATE_TURNING_ON:
+              syncBluetoothOnOffSwitch();
+              break;
+          }
+        }
+      }
+    };
+    IntentFilter bleStateChangeFilter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
+    registerReceiver(mBluetoothStateChangeReceiver, bleStateChangeFilter);
+  }
+
+  public void registerWifiSTateChangeReceiver() {
+    mWifiStateChangeReceiver = new BroadcastReceiver() {
+      @Override
+      public void onReceive(Context context, Intent intent) {
+        final String action = intent.getAction();
+        if (action.equals(WifiManager.WIFI_STATE_CHANGED_ACTION)) {
+          int WifiState = intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, WifiManager.WIFI_STATE_UNKNOWN);
+          switch (WifiState) {
+            case WifiManager.WIFI_STATE_ENABLED:
+            case WifiManager.WIFI_STATE_DISABLED:
+              syncWifiOnOffSwitch();
+              break;
+          }
+        }
+      }
+    };
+    IntentFilter wifiStateChangeFilter = new IntentFilter(WifiManager.WIFI_STATE_CHANGED_ACTION);
+    registerReceiver(mWifiStateChangeReceiver, wifiStateChangeFilter);
+  }
+
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_device_scan);
 
     syncAllSwitch();
+
+    registerBluetoothStateChangeReceiver();
+    registerWifiSTateChangeReceiver();
 
     handleBluetoothOnOffSwitch();
     handleLocationOnOffSwitch();
@@ -336,5 +345,15 @@ public class DeviceScanActivity extends ApplicationActivity {
   @Override
   protected void onPause() {
     super.onPause();
+  }
+
+  @Override
+  protected void onDestroy() {
+    super.onDestroy();
+
+    unregisterReceiver(mBluetoothStateChangeReceiver);
+    unregisterReceiver(mWifiStateChangeReceiver);
+    wifiReceiver.destory();
+    bleReceiver.destory();
   }
 }
