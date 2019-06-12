@@ -3,7 +3,17 @@
 [![Languages](https://img.shields.io/badge/language-java7-yellow.svg)]()
 [![Gradle](https://img.shields.io/badge/gradle-4.4-blue.svg)]()
 
-현재 최신 버전은 `v1.1.13` 입니다  [Download latest version](/app/libs)
+현재 최신 버전은 `v1.1.14` 입니다  [Download latest version](/app/libs)
+
+## Receivers min SDK version
+
+| Receivers | MinSdk version |
+| :-------------------: | :-------------------:|
+| BleReceiver | [![Min SDK](https://img.shields.io/badge/min_sdk-21-blue.svg)]() |
+| LegacyBleReceiver | [![Min SDK](https://img.shields.io/badge/min_sdk-18-blue.svg)]() |
+| WifiReceiver | [![Min SDK](https://img.shields.io/badge/min_sdk-1-blue.svg)]() |
+
+
 
 ## permission 요구사항
 ```xml
@@ -13,7 +23,6 @@
 <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
 <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 ```
-
 
 ## Example Import
 
