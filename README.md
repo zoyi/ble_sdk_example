@@ -66,7 +66,7 @@ git clone git@github.com:zoyi/ble_sdk_example.git
   }
 ```
 
-> 사용할 경우 unregister receiver를 호출 해주셔야 합니다. [아래 참고](Release receiver, stateChangeReceiver)
+> 사용할 경우 unregister receiver를 호출 해주셔야 합니다. [아래 참고](/README.md#release-receiver-statechangereceiver)
 
 - BleReceiver 생성, Callback 등록
 
@@ -123,7 +123,7 @@ git clone git@github.com:zoyi/ble_sdk_example.git
   }
 ```
 
-> 사용할 경우 unregister receiver를 호출 해주셔야 합니다. [아래 참고](Release receiver, stateChangeReceiver)
+> 사용할 경우 unregister receiver를 호출 해주셔야 합니다. [아래 참고](/README.md#release-receiver-statechangereceiver)
 
 - WifiReceiver 생성, Callback 등록
 
