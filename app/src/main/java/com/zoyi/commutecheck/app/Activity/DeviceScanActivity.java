@@ -353,7 +353,11 @@ public class DeviceScanActivity extends ApplicationActivity {
 
     unregisterReceiver(mBluetoothStateChangeReceiver);
     unregisterReceiver(mWifiStateChangeReceiver);
-    wifiReceiver.destory();
-    bleReceiver.destory();
+    if (wifiReceiver != null) {
+      wifiReceiver.destory();
+    }
+    if (bleReceiver != null) {
+      bleReceiver.destory();
+    }
   }
 }
