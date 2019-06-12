@@ -142,6 +142,8 @@ git clone git@github.com:zoyi/ble_sdk_example.git
   }
 ```
 
+----------------------------
+
 ### Callback Rssi Validate
 
 ```java
@@ -171,6 +173,8 @@ git clone git@github.com:zoyi/ble_sdk_example.git
     return false;
   }
 ```
+
+----------------------------
 
 ### Release receiver, stateChangeReceiver
 
